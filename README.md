@@ -1,5 +1,7 @@
 # Celestia Space Explorer – A spacecraft cockpit add-on for Celestia
 
+<img width="1920" height="995" alt="CSE" src="https://github.com/user-attachments/assets/1508c111-ee8d-4604-9467-9cc11fb4642e" />
+
 ## About
 It transforms the traditional planetarium experience into a first-person space exploration experience by adding a 2D spacecraft cockpit, engine sound effects and custom navigation behavior. The add-on does not attempt to simulate spacecraft physics or replace the original planetarium functionality.
 
