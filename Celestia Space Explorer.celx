@@ -1,0 +1,135 @@
+----------------------------------------------------------------------------
+--  Celestia Space Explorer                                               --
+--                                                                        --
+--  Created by: Georgi Georgiev (RacerBG)                                 --
+--                                                                        --
+--  Copyright (C) 2026 Georgi Georgiev (RacerBG)                          --
+--                                                                        --
+--  This program is free software: you can redistribute it and/or modify  --
+--  it under the terms of the GNU General Public License as published by  --
+--  the Free Software Foundation, either version 3 of the License, or     --
+--  (at your option) any later version.                                   --
+--                                                                        --
+--  This program is distributed in the hope that it will be useful,       --
+--  but WITHOUT ANY WARRANTY; without even the implied warranty of        --
+--  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         --
+--  GNU General Public License for more details.                          --
+----------------------------------------------------------------------------
+
+local OVERLAY_SECONDS = 31536000
+local MAIN_CHANNEL = 17
+local SECONDARY_CHANNEL = 18
+local CLICK_CHANNEL = 19
+local ENTER_CHANNEL = 20
+local VOLUME = 0.50
+local ACCEL_TIME = 0.50
+local START_INTER = 0
+local END_INTER = 0.25
+local CENTER_SECONDS = 3
+local MIN_GOTO_SECONDS = 3
+local MAX_GOTO_SECONDS = 60
+local MOON_DISTANCE = 384400
+local observer = celestia:getobserver()
+local scriptDir = celestia:getscriptpath():match("^(.*[/\\])") or ""
+local cockpitImage = scriptDir .. "cockpit.png"
+local mainSound = scriptDir .. "main.wav"
+local secondarySound = scriptDir .. "secondary.wav"
+local clickSound = scriptDir .. "click.wav"
+local enterSound = scriptDir .. "enter.wav"
+local soundMode = "off"
+local travelSoundMode = "main"
+
+celestia:stopaudio(MAIN_CHANNEL)
+celestia:stopaudio(SECONDARY_CHANNEL)
+celestia:stopaudio(CLICK_CHANNEL)
+celestia:stopaudio(ENTER_CHANNEL)
+celestia:addimageoverlay(OVERLAY_SECONDS, 0, 0, nil, cockpitImage, true)
+celestia:setoverlayelements{Frame = false, Time = false, Velocity = false,}
+
+local function setSoundMode(mode)
+    if mode == soundMode then
+        return
+    end
+
+    celestia:stopaudio(MAIN_CHANNEL)
+    celestia:stopaudio(SECONDARY_CHANNEL)
+
+    if mode == "main" then
+        celestia:playaudio(MAIN_CHANNEL, mainSound, 0, VOLUME, 0, true, false)
+    elseif mode == "secondary" then
+        celestia:playaudio(SECONDARY_CHANNEL, secondarySound, 0, VOLUME, 0, true, false)
+    end
+
+    soundMode = mode
+end
+
+local function playClick()
+    celestia:stopaudio(CLICK_CHANNEL)
+    celestia:playaudio(CLICK_CHANNEL, clickSound, 0, VOLUME, 0, false, false)
+end
+
+local function playEnter()
+    celestia:stopaudio(ENTER_CHANNEL)
+    celestia:playaudio(ENTER_CHANNEL, enterSound, 0, VOLUME, 0, false, false)
+end
+
+local function getGotoSeconds(target)
+    local distance = observer:getposition():distanceto(target:getposition())
+
+    if distance <= MOON_DISTANCE then
+        return MIN_GOTO_SECONDS
+    end
+
+    local seconds = MIN_GOTO_SECONDS + 2.5 * math.log(distance / MOON_DISTANCE) / math.log(10)
+    return math.max(MIN_GOTO_SECONDS, math.min(MAX_GOTO_SECONDS, seconds))
+end
+
+local function onMouseUp(event)
+    return event ~= nil and event.button == 4
+end
+
+local function onKey(event)
+    local key = event and event.char
+    local target = celestia:getselection()
+
+    if key == "C-m" then
+        playClick()
+        return false
+    end
+
+    if (key == "g" or key == "G") and target ~= nil then
+        local travelSeconds = getGotoSeconds(target)
+        travelSoundMode = "main"
+        observer:goto(target, travelSeconds, START_INTER, END_INTER, ACCEL_TIME)
+        celestia:flash("Metric transit to " .. target:name() .. " in progress...", travelSeconds)
+        return true
+    elseif key == "c" or key == "C" and target ~= nil then
+        travelSoundMode = "secondary"
+        observer:center(target, CENTER_SECONDS)
+        celestia:flash("Aligning vector to " .. target:name() .. " in progress...", CENTER_SECONDS)
+        return true
+    end
+
+    return false
+end
+
+local function onTick()
+    if observer:travelling() then
+        setSoundMode(travelSoundMode)
+    else
+        setSoundMode("off")
+        travelSoundMode = "main"
+    end
+
+    return false
+end
+
+celestia:registereventhandler("mouseup", onMouseUp)
+celestia:registereventhandler("key", onKey)
+celestia:registereventhandler("tick", onTick)
+celestia:flash("Welcome to Celestia Space Explorer 1.0!", 5)
+playEnter()
+
+while true do
+    wait(0.1)
+end
