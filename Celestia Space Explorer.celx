@@ -91,19 +91,20 @@ end
 local function onKey(event)
     local key = event and event.char
     local target = celestia:getselection()
+    local hasTarget = target ~= nil and target:type() ~= "null"
 
     if key == "C-m" then
         playClick()
         return false
     end
 
-    if (key == "g" or key == "G") and target ~= nil then
+    if (key == "g" or key == "G") and hasTarget then
         local travelSeconds = getGotoSeconds(target)
         travelSoundMode = "main"
         observer:goto(target, travelSeconds, START_INTER, END_INTER, ACCEL_TIME)
         celestia:flash("Metric transit to " .. target:name() .. " in progress...", travelSeconds)
         return true
-    elseif key == "c" or key == "C" and target ~= nil then
+    elseif (key == "c" or key == "C") and hasTarget then
         travelSoundMode = "secondary"
         observer:center(target, CENTER_SECONDS)
         celestia:flash("Aligning vector to " .. target:name() .. " in progress...", CENTER_SECONDS)
